@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yoursite.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="DES 算法为密码体制中的对称密码体制,又被称为美国数据加密标准.DES 是一个分组加密算法,典型的 DES 以 64 位为分组对数据加密,加密和解密用的是同一个算法.密钥长 64 位,密钥事实上是 56 位参与 DES 运算(第 8、16、24、32、40、48、56、64 位是校验位,使得每个密钥都有奇数个 1),分组后的明文组和 56 位的密钥按位替代或交换的方法形成密文组.DES 算法的主">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DES 的设计与实现">
+<meta property="og:url" content="http://yoursite.com/2020/10/29/DES/index.html">
+<meta property="og:site_name" content="dxluo&#39;s blog">
+<meta property="og:description" content="DES 算法为密码体制中的对称密码体制,又被称为美国数据加密标准.DES 是一个分组加密算法,典型的 DES 以 64 位为分组对数据加密,加密和解密用的是同一个算法.密钥长 64 位,密钥事实上是 56 位参与 DES 运算(第 8、16、24、32、40、48、56、64 位是校验位,使得每个密钥都有奇数个 1),分组后的明文组和 56 位的密钥按位替代或交换的方法形成密文组.DES 算法的主">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yoursite.com/images/DES.png">
+<meta property="article:published_time" content="2020-10-29T13:21:36.000Z">
+<meta property="article:modified_time" content="2020-10-29T13:31:37.574Z">
+<meta property="article:author" content="dxluo">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/images/DES.png">
+
+<link rel="canonical" href="http://yoursite.com/2020/10/29/DES/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>DES 的设计与实现 | dxluo's blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">dxluo's blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Keep moving!</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/10/29/DES/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="dxluo">
+      <meta itemprop="description" content="西安电子科技大学本科在读">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="dxluo's blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          DES 的设计与实现
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-10-29 21:21:36 / 修改时间：21:31:37" itemprop="dateCreated datePublished" datetime="2020-10-29T21:21:36+08:00">2020-10-29</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>DES 算法为密码体制中的对称密码体制,又被称为美国数据加密标准.<br>DES 是一个分组加密算法,典型的 DES 以 64 位为分组对数据加密,加密和解密用的是同一个算法.<br>密钥长 64 位,密钥事实上是 56 位参与 DES 运算(第 8、16、24、32、40、48、56、64 位是校验位,使得每个密钥都有奇数个 1),分组后的明文组和 56 位的密钥按位替代或交换的方法形成密文组.<br>DES 算法的主要流程如下图所示,本文按照流程依次介绍每个模块.</p>
+<a id="more"></a>
+<p><img src="/images/DES.png" alt="DES"></p>
+<h2 id="初始置换-IP"><a href="#初始置换-IP" class="headerlink" title="初始置换 IP"></a>初始置换 IP</h2><p>初始置换 IP 目的是将输入的 64 位数据块按位重新组合,并把输出分为$L_0,R_0$两部分,每部分各长 32 位.<br>置换规则如下表所示:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">IP = [<span class="number">58</span>, <span class="number">50</span>, <span class="number">42</span>, <span class="number">34</span>, <span class="number">26</span>, <span class="number">18</span>, <span class="number">10</span>, <span class="number">2</span>,</span><br><span class="line">      <span class="number">60</span>, <span class="number">52</span>, <span class="number">44</span>, <span class="number">36</span>, <span class="number">28</span>, <span class="number">20</span>, <span class="number">12</span>, <span class="number">4</span>,</span><br><span class="line">      <span class="number">62</span>, <span class="number">54</span>, <span class="number">46</span>, <span class="number">38</span>, <span class="number">30</span>, <span class="number">22</span>, <span class="number">14</span>, <span class="number">6</span>,</span><br><span class="line">      <span class="number">64</span>, <span class="number">56</span>, <span class="number">48</span>, <span class="number">40</span>, <span class="number">32</span>, <span class="number">24</span>, <span class="number">16</span>, <span class="number">8</span>,</span><br><span class="line">      <span class="number">57</span>, <span class="number">49</span>, <span class="number">41</span>, <span class="number">33</span>, <span class="number">25</span>, <span class="number">17</span>, <span class="number">9</span>, <span class="number">1</span>,</span><br><span class="line">      <span class="number">59</span>, <span class="number">51</span>, <span class="number">43</span>, <span class="number">35</span>, <span class="number">27</span>, <span class="number">19</span>, <span class="number">11</span>, <span class="number">3</span>,</span><br><span class="line">      <span class="number">61</span>, <span class="number">53</span>, <span class="number">45</span>, <span class="number">37</span>, <span class="number">29</span>, <span class="number">21</span>, <span class="number">13</span>, <span class="number">5</span>,</span><br><span class="line">      <span class="number">63</span>, <span class="number">55</span>, <span class="number">47</span>, <span class="number">39</span>, <span class="number">31</span>, <span class="number">23</span>, <span class="number">15</span>, <span class="number">7</span>]</span><br></pre></td></tr></table></figure>
+<p>表中的数字代表新数据中此位置的数据在原数据中的位置,即原数据块的第 58 位放到新数据的第 1 位,第 50 位放到第 2 位,……依此类推,第 7 位放到第 64 位.置换后的数据分为$L_0$和$R_0$两部分,$L_0$为新数据的左 32 位,$R_0$为新数据的右 32 位.<br>要注意一点,位数是从左边开始数的,即最左边的位为 1,最右边的位为 64.</p>
+<h2 id="置换选择"><a href="#置换选择" class="headerlink" title="置换选择"></a>置换选择</h2><p>不考虑每个字节的第 8 位,DES 的密钥由 64 位减至 56 位,每个字节的第 8 位作为奇偶校验位.产生的 56 位密钥由下表生成(注意表中没有 8,16,24,32,40,48,56 和 64 这 8 位):</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">PC_1 = [<span class="number">57</span>, <span class="number">49</span>, <span class="number">41</span>, <span class="number">33</span>, <span class="number">25</span>, <span class="number">17</span>, <span class="number">9</span>,</span><br><span class="line">        <span class="number">1</span>, <span class="number">58</span>, <span class="number">50</span>, <span class="number">42</span>, <span class="number">34</span>, <span class="number">26</span>, <span class="number">18</span>,</span><br><span class="line">        <span class="number">10</span>, <span class="number">2</span>, <span class="number">59</span>, <span class="number">51</span>, <span class="number">43</span>, <span class="number">35</span>, <span class="number">27</span>,</span><br><span class="line">        <span class="number">19</span>, <span class="number">11</span>, <span class="number">3</span>, <span class="number">60</span>, <span class="number">52</span>, <span class="number">44</span>, <span class="number">36</span>,</span><br><span class="line">        <span class="number">63</span>, <span class="number">55</span>, <span class="number">47</span>, <span class="number">39</span>, <span class="number">31</span>, <span class="number">23</span>, <span class="number">15</span>,</span><br><span class="line">        <span class="number">7</span>, <span class="number">62</span>, <span class="number">54</span>, <span class="number">46</span>, <span class="number">38</span>, <span class="number">30</span>, <span class="number">22</span>,</span><br><span class="line">        <span class="number">14</span>, <span class="number">6</span>, <span class="number">61</span>, <span class="number">53</span>, <span class="number">45</span>, <span class="number">37</span>, <span class="number">29</span>,</span><br><span class="line">        <span class="number">21</span>, <span class="number">13</span>, <span class="number">5</span>, <span class="number">28</span>, <span class="number">20</span>, <span class="number">12</span>, <span class="number">4</span>]</span><br></pre></td></tr></table></figure>
+<p>在 DES 的每一轮中,从 56 位密钥产生出不同的 48 位子密钥,确定这些子密钥的方式如下:</p>
+<ol>
+<li>将 56 位的密钥分成两部分,每部分 28 位.</li>
+<li>根据轮数,这两部分分别循环左移 1 位或 2 位.每轮移动的位数如下表:</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SHIFT = [<span class="number">1</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>]</span><br></pre></td></tr></table></figure>
+<p>移动后,从 56 位中选出 48 位.这个过程中,既置换了每位的顺序,又选择了子密钥.置换规则如下表(注意表中没有 9,18,22,25,35,38,43 和 54 这 8 位):</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">PC_2 = [<span class="number">14</span>, <span class="number">17</span>, <span class="number">11</span>, <span class="number">24</span>, <span class="number">1</span>, <span class="number">5</span>,</span><br><span class="line">        <span class="number">3</span>, <span class="number">28</span>, <span class="number">15</span>, <span class="number">6</span>, <span class="number">21</span>, <span class="number">10</span>,</span><br><span class="line">        <span class="number">23</span>, <span class="number">19</span>, <span class="number">12</span>, <span class="number">4</span>, <span class="number">26</span>, <span class="number">8</span>,</span><br><span class="line">        <span class="number">16</span>, <span class="number">7</span>, <span class="number">27</span>, <span class="number">20</span>, <span class="number">13</span>, <span class="number">2</span>,</span><br><span class="line">        <span class="number">41</span>, <span class="number">52</span>, <span class="number">31</span>, <span class="number">37</span>, <span class="number">47</span>, <span class="number">55</span>,</span><br><span class="line">        <span class="number">30</span>, <span class="number">40</span>, <span class="number">51</span>, <span class="number">45</span>, <span class="number">33</span>, <span class="number">48</span>,</span><br><span class="line">        <span class="number">44</span>, <span class="number">49</span>, <span class="number">39</span>, <span class="number">56</span>, <span class="number">34</span>, <span class="number">53</span>,</span><br><span class="line">        <span class="number">46</span>, <span class="number">42</span>, <span class="number">50</span>, <span class="number">36</span>, <span class="number">29</span>, <span class="number">32</span>]</span><br></pre></td></tr></table></figure>
+<h2 id="选择扩展运算-E"><a href="#选择扩展运算-E" class="headerlink" title="选择扩展运算 E"></a>选择扩展运算 E</h2><p>选择扩展运算目标是 IP 置换后获得的右半部分$R_0$,将 32 位输入扩展为 48 位(分为 4 位 ×8 组)输出.<br>选择扩展运算目的有两个:生成与密钥相同长度的数据以进行异或运算;提供更长的结果,在后续的替代运算中可以进行压缩.<br>选择扩展运算原理如下表:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">E = [<span class="number">32</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>,</span><br><span class="line">     <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>,</span><br><span class="line">     <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>, <span class="number">11</span>, <span class="number">12</span>, <span class="number">13</span>,</span><br><span class="line">     <span class="number">12</span>, <span class="number">13</span>, <span class="number">14</span>, <span class="number">15</span>, <span class="number">16</span>, <span class="number">17</span>,</span><br><span class="line">     <span class="number">16</span>, <span class="number">17</span>, <span class="number">18</span>, <span class="number">19</span>, <span class="number">20</span>, <span class="number">21</span>,</span><br><span class="line">     <span class="number">20</span>, <span class="number">21</span>, <span class="number">22</span>, <span class="number">23</span>, <span class="number">24</span>, <span class="number">25</span>,</span><br><span class="line">     <span class="number">24</span>, <span class="number">25</span>, <span class="number">26</span>, <span class="number">27</span>, <span class="number">28</span>, <span class="number">29</span>,</span><br><span class="line">     <span class="number">28</span>, <span class="number">29</span>, <span class="number">30</span>, <span class="number">31</span>, <span class="number">32</span>, <span class="number">1</span>]</span><br></pre></td></tr></table></figure>
+<p>表中的数字代表位,最边上的两列数据是扩展的数据,可以看出,扩展的数据是从相邻两组分别取靠近的一位,4 位变为 6 位.靠近 32 位的位为 1,靠近 1 位的位为 32.表中第二行的 4 取自上组中的末位,9 取自下组中的首位.<br>选择扩展运算之后,右半部分数据$R_0$变为 48 位,与置换选择得到的轮密钥进行异或.</p>
+<h2 id="S-盒代换"><a href="#S-盒代换" class="headerlink" title="S 盒代换"></a>S 盒代换</h2><p>置换选择后的密钥与选择扩展运算分组异或以后得到 48 位的数据,将这个数据送入 S 盒,进行代换运算.代换由 8 个不同的 S 盒完成,每个 S 盒有 6 位输入 4 位输出.48 位输入分为 8 个 6 位的分组,一个分组对应一个 S 盒,对应的 S 盒对各组进行代换操作.<br>一个 S 盒就是一个 4 行 16 列的表,盒中的每一项都是一个 4 位的数.S 盒的 6 个输入确定了其对应的输出在哪一行哪一列,输入的高低两位做为行数<code>row</code>,中间四位做为列数<code>col</code>,在<code>S_BOX</code>中查找第<code>row</code>行<code>col</code>列对应的数据(&lt;32).<br>S 盒如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">S_BOX = [[<span class="number">14</span>, <span class="number">4</span>, <span class="number">13</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">15</span>, <span class="number">11</span>, <span class="number">8</span>, <span class="number">3</span>, <span class="number">10</span>, <span class="number">6</span>, <span class="number">12</span>, <span class="number">5</span>, <span class="number">9</span>, <span class="number">0</span>, <span class="number">7</span>,</span><br><span class="line">          <span class="number">0</span>, <span class="number">15</span>, <span class="number">7</span>, <span class="number">4</span>, <span class="number">14</span>, <span class="number">2</span>, <span class="number">13</span>, <span class="number">1</span>, <span class="number">10</span>, <span class="number">6</span>, <span class="number">12</span>, <span class="number">11</span>, <span class="number">9</span>, <span class="number">5</span>, <span class="number">3</span>, <span class="number">8</span>,</span><br><span class="line">          <span class="number">4</span>, <span class="number">1</span>, <span class="number">14</span>, <span class="number">8</span>, <span class="number">13</span>, <span class="number">6</span>, <span class="number">2</span>, <span class="number">11</span>, <span class="number">15</span>, <span class="number">12</span>, <span class="number">9</span>, <span class="number">7</span>, <span class="number">3</span>, <span class="number">10</span>, <span class="number">5</span>, <span class="number">0</span>,</span><br><span class="line">          <span class="number">15</span>, <span class="number">12</span>, <span class="number">8</span>, <span class="number">2</span>, <span class="number">4</span>, <span class="number">9</span>, <span class="number">1</span>, <span class="number">7</span>, <span class="number">5</span>, <span class="number">11</span>, <span class="number">3</span>, <span class="number">14</span>, <span class="number">10</span>, <span class="number">0</span>, <span class="number">6</span>, <span class="number">13</span>],</span><br><span class="line">         [<span class="number">15</span>, <span class="number">1</span>, <span class="number">8</span>, <span class="number">14</span>, <span class="number">6</span>, <span class="number">11</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">9</span>, <span class="number">7</span>, <span class="number">2</span>, <span class="number">13</span>, <span class="number">12</span>, <span class="number">0</span>, <span class="number">5</span>, <span class="number">10</span>,</span><br><span class="line">          <span class="number">3</span>, <span class="number">13</span>, <span class="number">4</span>, <span class="number">7</span>, <span class="number">15</span>, <span class="number">2</span>, <span class="number">8</span>, <span class="number">14</span>, <span class="number">12</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">10</span>, <span class="number">6</span>, <span class="number">9</span>, <span class="number">11</span>, <span class="number">5</span>,</span><br><span class="line">          <span class="number">0</span>, <span class="number">14</span>, <span class="number">7</span>, <span class="number">11</span>, <span class="number">10</span>, <span class="number">4</span>, <span class="number">13</span>, <span class="number">1</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">12</span>, <span class="number">6</span>, <span class="number">9</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">15</span>,</span><br><span class="line">          <span class="number">13</span>, <span class="number">8</span>, <span class="number">10</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">15</span>, <span class="number">4</span>, <span class="number">2</span>, <span class="number">11</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">12</span>, <span class="number">0</span>, <span class="number">5</span>, <span class="number">14</span>, <span class="number">9</span>],</span><br><span class="line">         [<span class="number">10</span>, <span class="number">0</span>, <span class="number">9</span>, <span class="number">14</span>, <span class="number">6</span>, <span class="number">3</span>, <span class="number">15</span>, <span class="number">5</span>, <span class="number">1</span>, <span class="number">13</span>, <span class="number">12</span>, <span class="number">7</span>, <span class="number">11</span>, <span class="number">4</span>, <span class="number">2</span>, <span class="number">8</span>,</span><br><span class="line">          <span class="number">13</span>, <span class="number">7</span>, <span class="number">0</span>, <span class="number">9</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">10</span>, <span class="number">2</span>, <span class="number">8</span>, <span class="number">5</span>, <span class="number">14</span>, <span class="number">12</span>, <span class="number">11</span>, <span class="number">15</span>, <span class="number">1</span>,</span><br><span class="line">          <span class="number">13</span>, <span class="number">6</span>, <span class="number">4</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">15</span>, <span class="number">3</span>, <span class="number">0</span>, <span class="number">11</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">12</span>, <span class="number">5</span>, <span class="number">10</span>, <span class="number">14</span>, <span class="number">7</span>,</span><br><span class="line">          <span class="number">1</span>, <span class="number">10</span>, <span class="number">13</span>, <span class="number">0</span>, <span class="number">6</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">7</span>, <span class="number">4</span>, <span class="number">15</span>, <span class="number">14</span>, <span class="number">3</span>, <span class="number">11</span>, <span class="number">5</span>, <span class="number">2</span>, <span class="number">12</span>],</span><br><span class="line">         [<span class="number">7</span>, <span class="number">13</span>, <span class="number">14</span>, <span class="number">3</span>, <span class="number">0</span>, <span class="number">6</span>, <span class="number">9</span>, <span class="number">10</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">8</span>, <span class="number">5</span>, <span class="number">11</span>, <span class="number">12</span>, <span class="number">4</span>, <span class="number">15</span>,</span><br><span class="line">          <span class="number">13</span>, <span class="number">8</span>, <span class="number">11</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">15</span>, <span class="number">0</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">7</span>, <span class="number">2</span>, <span class="number">12</span>, <span class="number">1</span>, <span class="number">10</span>, <span class="number">14</span>, <span class="number">9</span>,</span><br><span class="line">          <span class="number">10</span>, <span class="number">6</span>, <span class="number">9</span>, <span class="number">0</span>, <span class="number">12</span>, <span class="number">11</span>, <span class="number">7</span>, <span class="number">13</span>, <span class="number">15</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">14</span>, <span class="number">5</span>, <span class="number">2</span>, <span class="number">8</span>, <span class="number">4</span>,</span><br><span class="line">          <span class="number">3</span>, <span class="number">15</span>, <span class="number">0</span>, <span class="number">6</span>, <span class="number">10</span>, <span class="number">1</span>, <span class="number">13</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">11</span>, <span class="number">12</span>, <span class="number">7</span>, <span class="number">2</span>, <span class="number">14</span>],</span><br><span class="line">         [<span class="number">2</span>, <span class="number">12</span>, <span class="number">4</span>, <span class="number">1</span>, <span class="number">7</span>, <span class="number">10</span>, <span class="number">11</span>, <span class="number">6</span>, <span class="number">8</span>, <span class="number">5</span>, <span class="number">3</span>, <span class="number">15</span>, <span class="number">13</span>, <span class="number">0</span>, <span class="number">14</span>, <span class="number">9</span>,</span><br><span class="line">          <span class="number">14</span>, <span class="number">11</span>, <span class="number">2</span>, <span class="number">12</span>, <span class="number">4</span>, <span class="number">7</span>, <span class="number">13</span>, <span class="number">1</span>, <span class="number">5</span>, <span class="number">0</span>, <span class="number">15</span>, <span class="number">10</span>, <span class="number">3</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">6</span>,</span><br><span class="line">          <span class="number">4</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">11</span>, <span class="number">10</span>, <span class="number">13</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">15</span>, <span class="number">9</span>, <span class="number">12</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">3</span>, <span class="number">0</span>, <span class="number">14</span>,</span><br><span class="line">          <span class="number">11</span>, <span class="number">8</span>, <span class="number">12</span>, <span class="number">7</span>, <span class="number">1</span>, <span class="number">14</span>, <span class="number">2</span>, <span class="number">13</span>, <span class="number">6</span>, <span class="number">15</span>, <span class="number">0</span>, <span class="number">9</span>, <span class="number">10</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">3</span>],</span><br><span class="line">         [<span class="number">12</span>, <span class="number">1</span>, <span class="number">10</span>, <span class="number">15</span>, <span class="number">9</span>, <span class="number">2</span>, <span class="number">6</span>, <span class="number">8</span>, <span class="number">0</span>, <span class="number">13</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">14</span>, <span class="number">7</span>, <span class="number">5</span>, <span class="number">11</span>,</span><br><span class="line">          <span class="number">10</span>, <span class="number">15</span>, <span class="number">4</span>, <span class="number">2</span>, <span class="number">7</span>, <span class="number">12</span>, <span class="number">9</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">1</span>, <span class="number">13</span>, <span class="number">14</span>, <span class="number">0</span>, <span class="number">11</span>, <span class="number">3</span>, <span class="number">8</span>,</span><br><span class="line">          <span class="number">9</span>, <span class="number">14</span>, <span class="number">15</span>, <span class="number">5</span>, <span class="number">2</span>, <span class="number">8</span>, <span class="number">12</span>, <span class="number">3</span>, <span class="number">7</span>, <span class="number">0</span>, <span class="number">4</span>, <span class="number">10</span>, <span class="number">1</span>, <span class="number">13</span>, <span class="number">11</span>, <span class="number">6</span>,</span><br><span class="line">          <span class="number">4</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">12</span>, <span class="number">9</span>, <span class="number">5</span>, <span class="number">15</span>, <span class="number">10</span>, <span class="number">11</span>, <span class="number">14</span>, <span class="number">1</span>, <span class="number">7</span>, <span class="number">6</span>, <span class="number">0</span>, <span class="number">8</span>, <span class="number">13</span>],</span><br><span class="line">         [<span class="number">4</span>, <span class="number">11</span>, <span class="number">2</span>, <span class="number">14</span>, <span class="number">15</span>, <span class="number">0</span>, <span class="number">8</span>, <span class="number">13</span>, <span class="number">3</span>, <span class="number">12</span>, <span class="number">9</span>, <span class="number">7</span>, <span class="number">5</span>, <span class="number">10</span>, <span class="number">6</span>, <span class="number">1</span>,</span><br><span class="line">          <span class="number">13</span>, <span class="number">0</span>, <span class="number">11</span>, <span class="number">7</span>, <span class="number">4</span>, <span class="number">9</span>, <span class="number">1</span>, <span class="number">10</span>, <span class="number">14</span>, <span class="number">3</span>, <span class="number">5</span>, <span class="number">12</span>, <span class="number">2</span>, <span class="number">15</span>, <span class="number">8</span>, <span class="number">6</span>,</span><br><span class="line">          <span class="number">1</span>, <span class="number">4</span>, <span class="number">11</span>, <span class="number">13</span>, <span class="number">12</span>, <span class="number">3</span>, <span class="number">7</span>, <span class="number">14</span>, <span class="number">10</span>, <span class="number">15</span>, <span class="number">6</span>, <span class="number">8</span>, <span class="number">0</span>, <span class="number">5</span>, <span class="number">9</span>, <span class="number">2</span>,</span><br><span class="line">          <span class="number">6</span>, <span class="number">11</span>, <span class="number">13</span>, <span class="number">8</span>, <span class="number">1</span>, <span class="number">4</span>, <span class="number">10</span>, <span class="number">7</span>, <span class="number">9</span>, <span class="number">5</span>, <span class="number">0</span>, <span class="number">15</span>, <span class="number">14</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">12</span>],</span><br><span class="line">         [<span class="number">13</span>, <span class="number">2</span>, <span class="number">8</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">15</span>, <span class="number">11</span>, <span class="number">1</span>, <span class="number">10</span>, <span class="number">9</span>, <span class="number">3</span>, <span class="number">14</span>, <span class="number">5</span>, <span class="number">0</span>, <span class="number">12</span>, <span class="number">7</span>,</span><br><span class="line">          <span class="number">1</span>, <span class="number">15</span>, <span class="number">13</span>, <span class="number">8</span>, <span class="number">10</span>, <span class="number">3</span>, <span class="number">7</span>, <span class="number">4</span>, <span class="number">12</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">11</span>, <span class="number">0</span>, <span class="number">14</span>, <span class="number">9</span>, <span class="number">2</span>,</span><br><span class="line">          <span class="number">7</span>, <span class="number">11</span>, <span class="number">4</span>, <span class="number">1</span>, <span class="number">9</span>, <span class="number">12</span>, <span class="number">14</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">6</span>, <span class="number">10</span>, <span class="number">13</span>, <span class="number">15</span>, <span class="number">3</span>, <span class="number">5</span>, <span class="number">8</span>,</span><br><span class="line">          <span class="number">2</span>, <span class="number">1</span>, <span class="number">14</span>, <span class="number">7</span>, <span class="number">4</span>, <span class="number">10</span>, <span class="number">8</span>, <span class="number">13</span>, <span class="number">15</span>, <span class="number">12</span>, <span class="number">9</span>, <span class="number">0</span>, <span class="number">3</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">11</span>]]</span><br></pre></td></tr></table></figure>
+<p>例如,假设 S 盒 8 的输入为<code>110011</code>,第 1 位和第 6 位组合为<code>11</code>,对应于 S 盒 8 的第 3 行;第 2 位到第 5 位为<code>1001</code>,对应于 S 盒 8 的第 9 列.S 盒 8 的第 3 行第 9 列的数字为<code>12</code>,因此用<code>1100</code>来代换<code>110011</code>.注意,S 盒的行列计数都是从 0 开始.<br>代换过程产生 8 个 4 位的分组,组合在一起形成 32 位数据.<br>S 盒代换时 DES 算法的关键步骤,所有的其他的运算都是线性的,易于分析,而 S 盒是非线性的,相比于其他步骤,提供了更好安全性.</p>
+<h2 id="置换运算-P"><a href="#置换运算-P" class="headerlink" title="置换运算 P"></a>置换运算 P</h2><p>S 盒代换运算的 32 位输出按照 P 盒进行置换.该置换把输入的每位映射到输出位,任何一位不能被映射两次,也不能被略去,映射规则如下表:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">P = [<span class="number">16</span>, <span class="number">7</span>, <span class="number">20</span>, <span class="number">21</span>, <span class="number">29</span>, <span class="number">12</span>, <span class="number">28</span>, <span class="number">17</span>,</span><br><span class="line">     <span class="number">1</span>, <span class="number">15</span>, <span class="number">23</span>, <span class="number">26</span>, <span class="number">5</span>, <span class="number">18</span>, <span class="number">31</span>, <span class="number">10</span>,</span><br><span class="line">     <span class="number">2</span>, <span class="number">8</span>, <span class="number">24</span>, <span class="number">14</span>, <span class="number">32</span>, <span class="number">27</span>, <span class="number">3</span>, <span class="number">9</span>,</span><br><span class="line">     <span class="number">19</span>, <span class="number">13</span>, <span class="number">30</span>, <span class="number">6</span>, <span class="number">22</span>, <span class="number">11</span>, <span class="number">4</span>, <span class="number">25</span>]</span><br></pre></td></tr></table></figure>
+<p>表中的数字代表原数据中此位置的数据在新数据中的位置,即原数据块的第 16 位放到新数据的第 1 位,第 7 位放到第 2 位,……依此类推,第 25 位放到第 32 位.<br>最后,P 盒置换的结果与最初的 64 位分组左半部分$L_0$异或,然后左、右半部分交换,接着开始另一轮.</p>
+<h2 id="逆初始置换-IP-1"><a href="#逆初始置换-IP-1" class="headerlink" title="逆初始置换$IP^{-1}$"></a>逆初始置换$IP^{-1}$</h2><p>逆初始置换$IP^{-1}$是初始置换 IP 的逆过程,DES 最后一轮后,左、右两半部分并未进行交换,而是两部分合并形成一个分组做为逆初始置换的输入。逆初始置换规则如下表:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">IP_1 = [<span class="number">40</span>, <span class="number">8</span>, <span class="number">48</span>, <span class="number">16</span>, <span class="number">56</span>, <span class="number">24</span>, <span class="number">64</span>, <span class="number">32</span>,</span><br><span class="line">        <span class="number">39</span>, <span class="number">7</span>, <span class="number">47</span>, <span class="number">15</span>, <span class="number">55</span>, <span class="number">23</span>, <span class="number">63</span>, <span class="number">31</span>,</span><br><span class="line">        <span class="number">38</span>, <span class="number">6</span>, <span class="number">46</span>, <span class="number">14</span>, <span class="number">54</span>, <span class="number">22</span>, <span class="number">62</span>, <span class="number">30</span>,</span><br><span class="line">        <span class="number">37</span>, <span class="number">5</span>, <span class="number">45</span>, <span class="number">13</span>, <span class="number">53</span>, <span class="number">21</span>, <span class="number">61</span>, <span class="number">29</span>,</span><br><span class="line">        <span class="number">36</span>, <span class="number">4</span>, <span class="number">44</span>, <span class="number">12</span>, <span class="number">52</span>, <span class="number">20</span>, <span class="number">60</span>, <span class="number">28</span>,</span><br><span class="line">        <span class="number">35</span>, <span class="number">3</span>, <span class="number">43</span>, <span class="number">11</span>, <span class="number">51</span>, <span class="number">19</span>, <span class="number">59</span>, <span class="number">27</span>,</span><br><span class="line">        <span class="number">34</span>, <span class="number">2</span>, <span class="number">42</span>, <span class="number">10</span>, <span class="number">50</span>, <span class="number">18</span>, <span class="number">58</span>, <span class="number">26</span>,</span><br><span class="line">        <span class="number">33</span>, <span class="number">1</span>, <span class="number">41</span>, <span class="number">9</span>, <span class="number">49</span>, <span class="number">17</span>, <span class="number">57</span>, <span class="number">25</span>]</span><br></pre></td></tr></table></figure>
+<p>经过以上步骤,就可以得到密文了.</p>
+<p>全部源代码<br><a href="https://github.com/dongxuluo/DES" target="_blank" rel="noopener">DES</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/10/13/vigenere/" rel="prev" title="维吉尼亚密钥破解">
+      <i class="fa fa-chevron-left"></i> 维吉尼亚密钥破解
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#初始置换-IP"><span class="nav-number">1.</span> <span class="nav-text">初始置换 IP</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#置换选择"><span class="nav-number">2.</span> <span class="nav-text">置换选择</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#选择扩展运算-E"><span class="nav-number">3.</span> <span class="nav-text">选择扩展运算 E</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#S-盒代换"><span class="nav-number">4.</span> <span class="nav-text">S 盒代换</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#置换运算-P"><span class="nav-number">5.</span> <span class="nav-text">置换运算 P</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#逆初始置换-IP-1"><span class="nav-number">6.</span> <span class="nav-text">逆初始置换$IP^{-1}$</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="dxluo"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">dxluo</p>
+  <div class="site-description" itemprop="description">西安电子科技大学本科在读</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">dxluo</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>
